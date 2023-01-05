@@ -1,0 +1,34 @@
+title: GlowingSword's blog
+author:
+  name: glowingsword
+  email: glowingsword@gmail.com
+description: > # this means to ignore newlines until "show_excerpts:"
+  Добро пожаловать на glowingsword.ru! Это блог IT—энтузиаста, системного
+  администратора и любителя компьютерных игр жанров FPS, и RTS.
+
+show_excerpts: false # set to true to show excerpts on the homepage
+
+# Minima date format
+# refer to https://shopify.github.io/liquid/filters/date/ if you want to customize this
+minima:
+  date_format: "%b %-d, %Y"
+
+  # generate social links in footer
+  social_links:
+    - { platform: github,         user_url: "https://github.com/glowingsword" }
+    - { platform: keybase,        user_url: "https://keybase.io/glowingsword" }
+    - { platform: linkedin,       user_url: "https://www.linkedin.com/in/andrei-gutu-b54b6096/" }
+    - { platform: stackoverflow,  user_url: "https://stackoverflow.com/users/20495030/glowingsword" }
+    - { platform: telegram,       user_url: "https://t.me/glowingsword" }
+
+# If you want to link only specific pages in your header, uncomment
+# this and add the path to the pages in order as they should show up
+#header_pages:
+# - about.md
+
+# Build settings
+theme: minima
+
+plugins:
+ - jekyll-feed
+ - jekyll-seo-tag

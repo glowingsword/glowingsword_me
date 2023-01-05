@@ -1,0 +1,43 @@
+---
+id: 506
+title: 'Простой способ протестировать работу Вашего сайта c PHP7 в режиме php-fpm не обновляя системную версию PHP'
+date: '2015-12-17T17:00:55+02:00'
+author: 'Андрей Гуцу'
+layout: revision
+guid: 'https://glowingsword.ru/504-revision-v1/'
+permalink: '/?p=506'
+---
+
+Нашёл простой способ протестировать работу Вашего сайта c PHP7 не обновляя системную версию PHP(на случай, если нужно будет быстро откатиться на предыдущую версию). Так как я использую Centos 7 и связку Nginx+php-fpm, то все рекомендации данные ниже будут приведены для перевода на версию PHP7 сайтов работающих на сервере с Centos 7, php-fpm и nginx.
+
+Устанавливаем репозиторий Remi командой
+
+wget http://rpms.famillecollet.com/enterprise/remi-release-7.rpm
+rpm -Uvh remi-release-7.rpm
+
+yum install php70-php
+
+устанавливаем дополнительные пакеты:
+
+yum install php70-php-pear php70-php-bcmath php70-php-pecl-jsond-devel php70-php-mysqlnd php70-php-gd php70-php-common php70-php-fpm php70-php-intl php70-php-cli php70-php php70-php-xml php70-php-opcache php70-php-pecl-apcu php70-php-pecl-jsond php70-php-pdo php70-php-gmp php70-php-process php70-php-pecl-imagick php70-php-devel php70-php-mbstring
+
+Не нужные Вам модули можете не устанавливать, но если не уверены, что какой-то из перечисленных пакетов Вам точно не нужен, лучше установить пакет, польза от которого Вам не очевидна, чем потом изучать требования Вашего скрипта, силясь понять чего ему не хватает:)
+
+Проверяем необходимые настройки в конфигурационных файлах, расположенных в каталоге /etc/opt/remi/php70/, приводим их к нужному виду, после чего останавливаем php-fpm системной версии комадами
+
+systemctl stop php-fpm
+systemctl disable php-fpm
+
+и запускаем установленную нами 7 версию php-fpm
+
+systemctl start php70-php-fpm
+systemctl enable php70-php-fpm
+
+Проверяем корректно ли работает Ваш сайт с новой версией PHP, в случае необходимости Вы всегда можете остановить 7 версию php и запустить предыдущую командами
+
+systemctl stop php70-php-fpm
+systemctl disable php70-php-fpm
+systemctl start php-fpm
+systemctl enable php-fpm
+
+На этом всё. Желаю всем удачного перехода на PHP7. К сожалению, с некоторыми расширениями PHP 7 версия PHP  пока ещё не совместима. Некоторые популярные скрипты также пока не поддерживают 7 версию PHP, но плюсы перехода на 7 версию очевидны, поэтому будем надеяться что данные проблемы скоро решатся, и переход на 7 версию станет новым трендом. 

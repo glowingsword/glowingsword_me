@@ -1,0 +1,108 @@
+---
+id: 310
+title: 'Создание небольшой локальной сети с помощью Ubuntu: настраиваем кеширующий прокси-сервер squid3'
+date: '2013-08-16T17:16:29+03:00'
+author: 'Андрей Гуцу'
+layout: revision
+guid: 'http://blog.lordofgale.org/2013/08/280-revision-v1/'
+permalink: '/?p=310'
+---
+
+<p>В заключительной, третьей, части цикла  постов “Создание небольшой локальной сети с помощью Ubuntu” я кратко опишу процедуру настройки кэширующего прокси-сервера Squid3 для снижения нагрузки на канал в нашей локальной сети.</p>
+
+<p>Установка прокси-сервера squid3 производится командой:
+<pre><code class="bash">
+sudo apt-get install squid3
+</code></pre>
+</p>
+
+<p>Пора  создать копию конфигурационного файла squid(на случай, если мы что-то напутаем в нашем конфигурационном файле). Всегда делайте копию конфигурационных фалов, перед тем,  как начнёте активно их править.
+<pre><code class="bash">
+sudo cp /etc/squid3/squid.conf /etc/squid3/squid.conf.orig
+sudo chmod 400 /etc/squid3/squid.conf.orig
+</code></pre>
+</p>
+<p>
+<!--more-->
+А теперь открываем в любимом редакторе наш конфигурационный файл(вместо gedit укажите ваш любимый редактор):
+<pre><code class="bash">
+sudo gedit /etc/squid3/squid.conf
+</code></pre>
+</p>
+<p>
+И приводим его к такому виду:
+<pre><code class="bash">
+# Списки доступа рекомендованные по умолчанию
+acl manager proto cache_object
+acl localhost src 127.0.0.1/32 ::1
+acl to_localhost dst 127.0.0.0/8 0.0.0.0/32 ::1
+# Список доступа для нашей сети our_network, указывающий IP-сети/маску подсети в качестве источника соединений 
+acl our_network src 192.168.0.0/24
+
+# Списки прав доступа SSL_ports и Safe_ports, в которые добавляем соответствующие порты
+acl SSL_ports port 443
+acl Safe_ports port 80		# http
+acl Safe_ports port 8080	# http
+acl Safe_ports port 443		# https
+
+# Список CONNECT описывает метод соединения
+acl CONNECT method CONNECT
+
+# Разрешаем доступ к cachemgr только с localhost
+http_access allow manager localhost
+
+# Запрещаем доспуп к cachemgr из других сетей(в целях безопасности)
+http_access cachemgr deny manager
+
+# Запрещаем соединения к небезопасным портам
+http_access deny !Safe_ports
+
+# Запрещаем соединения к портам, не входящим в список SSL_ports
+http_access deny CONNECT !SSL_ports
+
+# Запрещаем доступ к web-серверам, работающим на localhost
+http_access deny to_localhost
+
+# Разрешаем доступ в интернет через наш прокси с localhost
+http_access allow localhost
+
+# Разрешаем доступ в интернет через наш прокси с нашей сети our_network
+http_access allow our_network
+
+# Запрещаем доступ к нашему прокси-серверу из всех других сетей(кроме указанных выше)
+http_access deny all
+
+# squid будет слушать порт 3128 в режиме intercept(данный режим позволяет принимать 
+# запросы перенаправленные с 80-го порта на 3128-ый порт)
+http_port 3128 intercept
+
+# Указываем директорию для кэшируемой информации
+cache_dir ufs /var/spool/squid3 100 16 256
+
+# Храним coredumps в каталоге первого уровня, а не в его подкаталогах
+coredump_dir /var/spool/squid3
+
+# Задаём шаблоны refresh_pattern
+refresh_pattern ^ftp:		1440	20%	10080
+refresh_pattern -i (/cgi-bin/|\?) 0	0%	0
+refresh_pattern .		0	20%	4320
+
+# Задаём отображаемое в сообщениях об ошибках, и прочих сообщениях, имя хоста
+visible_hostname my_host
+</code></pre>
+</p>
+<p>
+Перезагружаем squid командой:
+<pre><code>
+service squid3 restart
+</code></pre>
+</p>
+<p>
+Добавляем в NAS правило для заворачивания пакетов с портов 80 и 8080 на прокси-сервер(как прописать правила для перенаправления пакетов я описывал в первой части данного цикла постов о настройке сети):
+<pre><code>
+iptables -t nat -A PREROUTING -i eth1 ! -d 192.168.0.0/24 -p tcp -m multiport --dport 80,8080 -j DNAT --to 192.168.0.1:3128
+</code></pre>
+</p>
+<p>
+Ну вот, прокси-сервер с кэшированием запросов настроен. Конечно, вы можете ещё много чего настроить, ведь squid - необычайно мощный инструмент, но главное что основы работы с данным прокси-сервером вы уже освоили. Можете теперь с гордостью говорить, что вы - настоящий админ локалхоста и прилегающих к нему угодийИ радуемся, что нагрузка на интернет-канал теперь будет немного ниже благодаря кэшированию:)
+</p>

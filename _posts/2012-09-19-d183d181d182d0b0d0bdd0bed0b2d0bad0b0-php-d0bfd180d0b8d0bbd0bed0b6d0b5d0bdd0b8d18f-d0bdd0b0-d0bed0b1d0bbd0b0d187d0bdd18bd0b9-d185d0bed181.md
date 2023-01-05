@@ -1,0 +1,278 @@
+---
+id: 13
+title: 'Используем облачную платформу OpenShift  как хостинг для сайта на PHP'
+date: '2012-09-19T14:16:09+03:00'
+author: 'Андрей Гуцу'
+layout: post
+guid: 'https://blog-lordofgale.rhcloud.com/?p=13'
+permalink: /%d1%83%d1%81%d1%82%d0%b0%d0%bd%d0%be%d0%b2%d0%ba%d0%b0-php-%d0%bf%d1%80%d0%b8%d0%bb%d0%be%d0%b6%d0%b5%d0%bd%d0%b8%d1%8f-%d0%bd%d0%b0-%d0%be%d0%b1%d0%bb%d0%b0%d1%87%d0%bd%d1%8b%d0%b9-%d1%85%d0%be%d1%81/
+dsq_thread_id:
+    - '3757855347'
+categories:
+    - web
+---
+
+<p>Продемонстрирую я вам сей фокус на примере установки русской версии WordPress на OpenShift. Вы уже зарегестрированы на <a href="https://openshift.redhat.com/" title="https://openshift.redhat.com/">https://openshift.redhat.com/</a>? Нет? Значит пора пройти регистрацию. Бесплатно такой сервис мало кто раздаёт. Пока дают, нужно брать. Только недальновидный индивидуум отказывается от бесплатного сыра... И забудем на время про мышеловку... Срочно регестрируемcя. А то вдруг парни из RedHat перестанут давать бесплатно такой шикарный кусок сыра... Будем пробовать OpenShift в деле, ведь мы же не доверяем красивым словам маркетологов? </p>
+
+<p>Зарегистрировались? Ну вот, теперь пришла пора испытать даренного коня(то есть полученное местечко в облаке) на деле.</p>
+<!--more-->
+
+<p>Устанавливаем необходимые для rhc(утилиты для управления облачным сервисом OpenShift) зависимости:
+<pre><code class="bash">
+sudo apt-get install ruby rubygems git
+</code></pre></p>
+<p></p>Устанавливаем rhc:
+<pre><code class="bash">sudo gem install rhc</code></pre>
+
+
+
+<p> Сразу договоримся о терминах. Я буду использовать <strong>&lt;appname&gt;</strong> - как имя создаваемого нами приложения, а <strong>&lt;namespace&gt;</strong> - пространство имен, поддомен который мы создадим для доступных нам трёх приложений на OpenShift.</p>
+<p>
+Начинаем с создания &lt;namespace&gt; для наших приложений:
+<pre><code class="bash">$ rhc domain create -n &lt;namespace&gt; -l ваша_почта -p ваш_пароль</code></pre>
+</p>
+
+<p>Вместо create можно использоваить update, если нужно просто изменить что-то в уже созданном вами неймспейсе.</p>
+
+<p>
+Если у вас нет ключей SSH, автоматически будут сгенерированны ключи 
+<pre><code class="bash">
+~/.ssh/libra_id_rsa (приватный ключ)
+~/.ssh/libra_id_rsa.pub (публичный ключ)
+</code></pre>
+</p>
+
+<p>
+Теперь переходим к созданию приложения. Что-бы узнать, какие типы приложений поддерживаются из коробки, вводим команду:
+<pre><code class="bash">
+$ rhc setup
+</code></pre>
+</p>
+
+<p>
+И получаем список типов поддерживаемых приложений:
+<code class="bash>
+Below is a list of the types of application you can create: Obtaining list of cartridges (please excuse the delay)...
+    * nodejs-0.6 - rhc app create -t nodejs-0.6 -a <app name>
+    * ruby-1.9 - rhc app create -t ruby-1.9 -a </app><app name>
+    * jbossas-7 - rhc app create -t jbossas-7 -a </app><app name>
+    * python-2.6 - rhc app create -t python-2.6 -a </app><app name>
+    * jenkins-1.4 - rhc app create -t jenkins-1.4 -a </app><app name>
+    * ruby-1.8 - rhc app create -t ruby-1.8 -a </app><app name>
+    * jbosseap-6.0 - rhc app create -t jbosseap-6.0 -a </app><app name>
+    * diy-0.1 - rhc app create -t diy-0.1 -a </app><app name>
+    * php-5.3 - rhc app create -t php-5.3 -a </app><app name>
+    * perl-5.10 - rhc app create -t perl-5.10 -a </app><app name>
+</app></code>
+</p>
+
+<p>
+Итак, для php-приложения нам нужно ввести команду:
+<pre><code class="bash">
+$ rhc app create -t php-5.3 -a < имя приложения>
+</code></pre>
+</p>
+
+<p>
+В конце процедуры вы увидите в выхлопе программы что-то вроде такого текста:
+<pre><code class="bash">
+Application &lt;appname&gt; is available at: http://&lt;appname&gt;-&lt;namespace&gt;.rhcloud.com/
+  Git URL: ssh://&lt;UID&gt;@&lt;appname&gt;-&lt;namespace&gt;.rhcloud.com/~/git/&lt;appname&gt;.git/
+Successfully created application: &lt;appname&gt;
+</code></pre>
+</p>
+
+<p>Итак, удачно создано приложение. И вы можете теперь спокойно заливать файлы вашего приложения на сервер при помощи git. Но вначале стоит установить дополнительные картриджи для приложения.
+</p>
+<p>
+Получаем список картриджей:
+<pre><code class="bash">
+$ rhc app cartridge list
+</code></pre>
+</p>
+
+<p>
+Подключаем MySQL к созданному нами приложению.
+
+<pre>
+<code class="bash"
+$ rhc app cartridge add -a &lt;appname&gt; -c mysql-5.1
+</code>
+</code></pre>
+
+</p><p>Как результат, получаем примерно такой выхлоп:
+<pre><code class="bash">
+RESULT:
+
+MySQL 5.1 database added.  Please make note of these credentials:
+
+   Root User: admin
+   Root Password: < ваш пароль от БД>
+   Database Name: &lt;appname&gt;
+
+Connection URL: mysql://127.xx.xx.1:xxxx/
+
+You can manage your new MySQL database by also embedding phpmyadmin-3.4.
+</code></pre>
+</p>
+
+<p>
+И любимый нами phpmyadmin-3.4:
+<pre><code class="bash">
+$ rhc app cartridge add -a &lt;appname&gt; -c phpmyadmin-3.4
+</code></pre>
+</p>
+
+<p>
+Как всегда, в выхлопе мы получаем всё что нужно для доступа к установленному картриджу:
+<pre><code class="bash">
+RESULT:
+
+phpMyAdmin 3.4 added.  Please make note of these MySQL credentials again:
+
+   Root User: admin
+   Root Password: < ваш пароль от БД>
+
+URL: https://&lt;appname&gt;-&lt;namespace&gt;.rhcloud.com/phpmyadmin/
+</code></pre>
+</p>
+
+<p>
+Теперь установим cron:
+<pre><code class="bash">
+$ rhc app cartridge add -a &lt;appname&gt; -c cron-1.4
+</code></pre>
+</p>
+
+<p>
+Как всегда, не забываем глянуть что ценного нам напишут в выхлопе rhc:
+<pre><code class="bash">
+RESULT:
+
+cron-1.4 added to application &lt;appname&gt;
+
+To schedule your scripts to run on a periodic basis, add the scripts to 
+your application's .openshift/cron/{minutely,hourly,daily,weekly,monthly}/
+directories (and commit and redeploy your application).
+
+Example: A script .openshift/cron/hourly/crony added to your application
+         will be executed once every hour.
+         Similarly, a script .openshift/cron/weekly/chronograph added
+         to your application will be executed once every week.
+</code></pre>
+</p>
+
+<p>
+OK, пришло время готовиться к установке нашего приложения.
+Мы будем устанавливать WordPress для создания персонального блога.
+</p>
+
+<p>
+Вначале нам нужен будет скелет будущего приложения. OpenShift используе набор хуков для деплоя, и специальную директорию, в которую должны писаться заргружаемые данные, плагины  и т.п. Директорию создаёт один из хуков, который кидает в каталог с движком символическую ссылку на каталог wordpress-content. Эти скрипты созданы за нас добрыми людьми, нужно их только получить.</p>
+
+<p>Создаём каталог для проекта:
+<pre><code class="bash">
+$ mkdir -p ~/projects/&lt;namespace&gt;/&lt;appname&gt;/php
+</code></pre>
+</p>
+
+<p>
+Теперь получаем файлы wordpress заточенного специально для работы с OpenShift.
+<pre><code class="bash">
+$ cd ~/projects/&lt;namespace&gt;/&lt;appname&gt;
+$ git init
+$ git remote add upstream -m master git://github.com/openshift/wordpress-example.git
+$ git pull -s recursive -X theirs upstream master
+$ rm -rf ~/projects/&lt;namespace&gt;/&lt;appname&gt;/php
+$ cd ~/projects/&lt;namespace&gt;
+$ wget http://ru.wordpress.org/latest-ru_RU.tar.gz
+$ tar xvzf latest-ru_RU.tar.gz
+$ mv wordpress/* &lt;appname&gt;/php/
+$ rm -rf wordpress
+$ cp &lt;appname&gt;/php/wp-config-sample.php &lt;appname&gt;/php/wp-config.php
+</code></pre>
+</p>
+
+<p>
+Пришло время настройки wordpress посредством редактирования файла wp-config.php, в котором нужно прописать переменные окружения, в которых OpenShift хранит имя БД, пароль от неё и имя хоста, на котором работает БД.
+</p>
+
+<p>
+Приводим соответствующие строки к виду:
+<pre><code class="php">
+/** Имя базы данных для WordPress */
+define('DB_NAME', $_ENV['OPENSHIFT_APP_NAME']);
+
+/** Имя пользователя MySQL */
+define('DB_USER', $_ENV['OPENSHIFT_DB_USERNAME']);
+
+/** Пароль к базе данных MySQL */
+define('DB_PASSWORD', $_ENV['OPENSHIFT_DB_PASSWORD']);
+
+/** Имя сервера MySQL */
+define('DB_HOST', $_ENV['OPENSHIFT_DB_HOST']);
+</code></pre>
+</p>
+
+<p>
+Получаем Уникальные ключи и соли для аутентификации на странице https://api.wordpress.org/secret-key/1.1/salt/:
+<pre><code class="php">
+define('AUTH_KEY',         'ключ');
+define('SECURE_AUTH_KEY',  'ключ');
+define('LOGGED_IN_KEY',    'ключ');
+define('NONCE_KEY',        'ключ');
+define('AUTH_SALT',        'соль');
+define('SECURE_AUTH_SALT', 'соль');
+define('LOGGED_IN_SALT',   'соль');
+define('NONCE_SALT',       'соль');
+</code></pre>
+
+</p><p>
+Заходим в каталог нашего приложения:
+<pre><code class="bash">
+$ cd &lt;appname&gt;
+</code></pre>
+
+</p><p>
+Пришло время отослать приложение на сервер:
+<pre><code class="bash">
+$ git add --all
+$ git commit -a -m "Push the russian version on WordPress on server"
+$ git push ssh://&lt;UID&gt;@&lt;appname&gt;-&lt;namespace&gt;.rhcloud.com/~/git/&lt;appname&gt;.git/
+</code></pre>
+</p>
+
+<p>
+Цепляем alias к своему домену:
+<pre><code class="bash">
+$ rhc app add-alias -a &lt;appname&gt;  --alias "&lt;appname&gt;.< доменное имя>.< доменная зона>"
+</code></pre>
+
+Или так:
+<pre><code class="bash">
+$ rhc app add-alias -a &lt;appname&gt;  --alias "www.< доменное имя>.< доменная зона>"
+</code></pre>
+
+</p><p>
+Удаляем его:
+<pre><code class="bash">
+$ rhc app remove-alias -a &lt;appname&gt; --alias "< поддомен>.< доменное имя>.< доменная зона>"
+</code></pre>
+</p>
+
+<p>
+В панели управления DNS ващего регисатратора  добавьте запись <strong>cname</strong> на <strong>www.доменное имя.доменная зона</strong> направляющую на адресс <strong>&lt;appname&gt;-&lt;namespace&gt;.rhcloud.com</strong>. Где <strong>&lt;appname&gt;</strong> - имя приложения, а <strong>&lt;namespace&gt;</strong> - пространство имен, поддомен созданный вами для доступных для создания вами трёх приложений.</p>
+
+<p>
+Одним из нескольких узких мест у OpenShift для вас может оказаться отсутствие постоянного IP у сервера, они там только динамические. Это серьёзная проблемма, ведь вы можете настроить ваше доменное имя для использования с хостингом OpenShift только при помощи CNAME-записей в панели регистратора вашего доменого имени, записи типа A для вас окажутся недоступны. То есть адреса вида http://blog.vasea-pupkin.com и http://www.vasea-pupkin.com  отлично прикрепляются к вашему проекту. А адрес http://vasea-pupkin.com не будет вести к вашему PHP-приложению. Вы можете узнать IP сервера, настроить запись CNAME, но при перезагрузке или изменениии сетевых настроек IP сервера поменяется, и красивый короткий адресс без поддомена не будет вести к вашему проекту. Но есть два способа приодолеть эту проблемму. Создать запись вида: " A	@	174.129.25.170", которая строит перенаправление с адресса без поддомена на адресс с поддоменом www. Или настроить перенаправление(Forwarding) с адресса без субдомена на адресс с субдоменом в панели управления вашим доменным именем у вашего регистратора(если там есть такая услуга, а она присутсвует у большинства регистраторов.
+</p>
+
+<p>При создании статьи использовались следующие источники:
+
+<ul>
+	<li><a href="http://www.webnoise.org.ua/2012/04/oblaka-na-konchikah-paltsev-znakomstvo-s-openshift/" title="Облака на кончиках пальцев. Знакомство с OpenShift">Облака на кончиках пальцев. Знакомство с OpenShift</a></li>
+	<li>встроенное руководство замечательной утилиты rhc, вызываемое параметром --help </li>
+
+	<li><a href="https://openshift.redhat.com/community/faq/" title="FAQ по вопросам эксплуатации OpenShift от создателей этого замечательного облачного хостинга">https://openshift.redhat.com/community/faq/</a></li>
+</ul>
+</p>
